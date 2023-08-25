@@ -1,33 +1,47 @@
-'use-strict';
+'use strict';
 const express = require('express');
+const dotenv = require('dotenv').config();
+const cors = require('cors');
 const weatherData = require('./data/weather.json');
 
-const app = express();
-
 const PORT = process.env.PORT;
+const app = express();
+app.use(cors());
 
-// app.get('/banana', (request, response) => {
-//   console.log(request.query); // query parameters
-//   if (!request.query.search) {
-//     response.status(400).send('Bad Request');
-//   } else {
-//     response.status(200).send('Thanks for searching');
-//   }
-// });
-
-app.get('./weather', (request, response) => {
-  console.log('get info');
-  const lon = request.query.lon;
-  const lat = request.query.lat;
-  const searchQuery = request.query;
-  if (!lon || !lat || !searchQuery){
-    response.status(400).send('Not Found');
-  } else {
-    response.status(200).send(
-      weatherData[]
-    );
+class Forecast {
+  constructor(date, description) {
+    this.date = date;
+    this.description = description;
   }
-  
+}
+
+app.get('/weather', (request, response) => {
+  const { lat, lon, searchQuery } = request.query;
+
+  if (!lat || !lon || !searchQuery) {
+    response.status(400).send('Bad Request');
+    return;
+  }
+
+  const foundCity = weatherData.find(
+    (item) =>
+      (item.lat === lat.toString() && item.lon === lon.toString()) ||
+      item.city_name.toLowerCase() === searchQuery.toLowerCase()
+  );
+
+  if (!foundCity) {
+    response.status(404).send('City not found');
+    return;
+  }
+
+  const forecasts = foundCity.data.map((dataPoint) => {
+    const forecastDate = dataPoint.valid_date;
+    const forecastDescription = dataPoint.weather.description;
+
+    return new Forecast(forecastDate, forecastDescription);
+  });
+
+  response.status(200).json(forecasts);
 });
 
 app.listen(PORT, () => {
