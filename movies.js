@@ -1,10 +1,19 @@
 'use strict';
 require('dotenv').config();
 const axios = require('axios');
+const cache = require('./cache.js');
 const MOVIE_API_KEY = process.env.MOVIE_API_KEY;
 
 class Movie {
-  constructor(image, title, overview, averageVotes, totalVotes, popularity, releasedOn) {
+  constructor(
+    image,
+    title,
+    overview,
+    averageVotes,
+    totalVotes,
+    popularity,
+    releasedOn
+  ) {
     this.image_url = image;
     this.title = title;
     this.overview = overview;
@@ -15,12 +24,7 @@ class Movie {
   }
 }
 
-
-
-// get the formatted data from MovieDB API
-async function getMovieData(city) {
-  let response = await axios.get(`https://api.themoviedb.org/3/search/movie?api_key=${MOVIE_API_KEY}&query=${city}`);
-  let movieData = response.data.results;
+function formatMovieData(movieData) {
   const formattedMovieData = movieData.map((item) => {
     let imageURLStart = 'https://image.tmdb.org/t/p/w500/';
     let image = `${imageURLStart}${item.poster_path}`;
@@ -31,13 +35,34 @@ async function getMovieData(city) {
     let popularity = item.popularity;
     let releasedOn = item.release_date;
 
-    return new Movie(image, title, overview, averageVotes, totalVotes, popularity, releasedOn);
+    return new Movie(
+      image,
+      title,
+      overview,
+      averageVotes,
+      totalVotes,
+      popularity,
+      releasedOn
+    );
   });
-  console.log(formattedMovieData);
   return formattedMovieData;
-  // return movieData;
+}
 
-
+// get the data from MovieDB API
+async function getMovieData(city) {
+  if (cache[city]) {
+    console.log(' movies cached');
+    return cache[city].data.results;
+  } else {
+    console.log('caching movies');
+    cache[city] = {};
+    let response = await axios.get(
+      `https://api.themoviedb.org/3/search/movie?api_key=${MOVIE_API_KEY}&query=${city}`
+    );
+    cache[city].data = response.data;
+    // let movieData = cache[city].data.results;
+    return cache[city].data.results;
+  }
 }
 
 const handleMovieRequest = async (req, res) => {
@@ -47,9 +72,9 @@ const handleMovieRequest = async (req, res) => {
     return;
   } else {
     let recievedMovieData = await getMovieData(searchQuery);
-    res.status(200).send(recievedMovieData);
+    let formattedMovieData = formatMovieData(recievedMovieData);
+    res.status(200).send(formattedMovieData);
   }
 };
-
 
 module.exports = handleMovieRequest;

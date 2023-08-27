@@ -1,6 +1,7 @@
 'use strict';
 require('dotenv').config();
 const axios = require('axios');
+const cache = require('./cache.js');
 
 const WEATHER_API_KEY = process.env.WEATHER_API_KEY;
 
@@ -13,7 +14,9 @@ class Forecast {
 
 //getting the formatted weather data from the weather API
 async function getWeatherData(lat, lon) {
-  let response = await axios.get(`http://api.weatherbit.io/v2.0/forecast/daily?key=${WEATHER_API_KEY}&lon=${lon}&lat=${lat}`);
+  let response = await axios.get(
+    `http://api.weatherbit.io/v2.0/forecast/daily?key=${WEATHER_API_KEY}&lon=${lon}&lat=${lat}`
+  );
   let weatherData = response.data.data;
   const formattedWeatherData = weatherData.map((item) => {
     let lowTemp = item.low_temp;
