@@ -12,12 +12,7 @@ class Forecast {
   }
 }
 
-//getting the formatted weather data from the weather API
-async function getWeatherData(lat, lon) {
-  let response = await axios.get(
-    `http://api.weatherbit.io/v2.0/forecast/daily?key=${WEATHER_API_KEY}&lon=${lon}&lat=${lat}`
-  );
-  let weatherData = response.data.data;
+function formatWeatherData(weatherData) {
   const formattedWeatherData = weatherData.map((item) => {
     let lowTemp = item.low_temp;
     let highTemp = item.high_temp;
@@ -27,8 +22,24 @@ async function getWeatherData(lat, lon) {
     let description = `Low of ${lowTemp}, high of ${highTemp} with ${cloudState}`;
     return new Forecast(description, dateTime);
   });
-  console.log(formattedWeatherData);
   return formattedWeatherData;
+}
+
+// get the weather data from the weather API
+async function getWeatherData(lat, lon) {
+  let weatherKey = 'lat=' + lat + 'lon=' + lon;
+  if (cache[weatherKey]) {
+    console.log(' weather cached');
+    return cache[weatherKey].data;
+  } else {
+    console.log('caching weather');
+    cache[weatherKey] = {};
+    let response = await axios.get(
+      `http://api.weatherbit.io/v2.0/forecast/daily?key=${WEATHER_API_KEY}&lon=${lon}&lat=${lat}`
+    );
+    cache[weatherKey].data = response.data.data;
+    return cache[weatherKey].data;
+  }
 }
 
 const handleWeatherRequest = async (req, res) => {
@@ -38,7 +49,8 @@ const handleWeatherRequest = async (req, res) => {
     return;
   } else {
     let recievedWeatherData = await getWeatherData(lat, lon);
-    res.status(200).send(recievedWeatherData);
+    let formattedWeatherData = formatWeatherData(recievedWeatherData);
+    res.status(200).send(formattedWeatherData);
   }
 };
 
